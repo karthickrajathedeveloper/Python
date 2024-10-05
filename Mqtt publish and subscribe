@@ -1,0 +1,118 @@
+# # import paho.mqtt
+# #1.6.1
+# # print(paho.mqtt.__version__)
+#
+import paho.mqtt.client as mqtt
+import json
+import datetime
+
+# Define the MQTT broker details
+broker = 'ip'
+port = 1883
+subscribe_topic = 'topic'
+subscribe_topic1 = 'topic'
+publish_topic = ''
+publish_topic1 = ''
+
+noOfTimeUpdate = 1
+noOfTimeRunning = 0
+noOfTimeUpdates = 1
+noOfTimeRunnings = 0
+
+# Function to get the current date and time in the required format
+def get_current_datetime():
+    now = datetime.datetime.now()
+    return now.strftime("%I:%M%p %d %b %Y")  # Example: "05:29AM 31 Aug 2024"
+
+# Define the JSON message to send
+def create_json_message():
+    data = {
+         "sysName": "AGBA",
+        "stockValue": "$25.678",
+        "assetValue": "1 day + 0.39%",
+        "rgbLed": "0",
+        "dateTime": get_current_datetime(),  # Add current date and time dynamically
+        "interval": "60" #minutes
+    }
+    return json.dumps(data)
+
+
+def json_message():
+    data = {
+         "sysName": "HDFC",
+         "stockValue": "$1.1601",
+         "assetValue": "1 day -3.33%",
+         "rgbLed": "0",
+         "dateTime": get_current_datetime(),  # Add current date and time dynamically
+         "interval": "2"
+     }
+    return json.dumps(data)
+
+
+# The callback for when the client receives a CONNACK response from the server.
+def on_connect(client, userdata, flags, rc):
+    print(f"Connected with result code {rc}")
+    # Subscribing to a topic
+    client.subscribe(subscribe_topic1)
+    client.subscribe(subscribe_topic)
+
+# The callback for when a PUBLISH message is received from the server.
+def on_message(client, userdata, msg):
+    print(f"Message received on topic {msg.topic}: {msg.payload.decode()}")
+    a = json.loads(msg.payload.decode())
+    global noOfTimeUpdate  # Declare the global variables
+    global noOfTimeRunning
+    global noOfTimeUpdates  # Declare the global variables
+    global noOfTimeRunnings
+    if a.get("device") == "1C:69:20:C8:74:4C":
+        battery_values = a.get("battery")
+        # Create a JSON array to send
+        json_array = json_message()
+        # Publish the JSON array to another topic
+        client.publish(publish_topic, json_array)
+        print(f"Published JSON array: {json_array}")
+        noOfTimeUpdates += 1
+        noOfTimeRunnings += 2
+        print("No of Time Update: ", noOfTimeUpdates)
+        print("No of Time Running: ", noOfTimeRunnings)
+        ct = datetime.datetime.now()
+        print("Current Battery Percentage : ", battery_values)
+        print("Current data time : ", ct)
+    if a.get("device") == "2C:BC:BB:01:27:00":
+        # Create a JSON array to send
+        battery_value = a.get("battery")
+        battery_values = (battery_value/4.2)*100
+        json_array = create_json_message()
+        #json_array = json_message()
+        # Publish the JSON array to another topic
+        client.publish(publish_topic1, json_array)
+        print(f"Published JSON array: {json_array}")
+        ct = datetime.datetime.now()
+        noOfTimeUpdate += 1
+        noOfTimeRunning += 30
+        print("No of Time Update: ",noOfTimeUpdate)
+        print("No of Time Running: ",noOfTimeRunning)
+        print("Current Battery Percentage : ",battery_values)
+        print("Current data time : ", ct)
+        with open("received_30-09_30mins.txt", "a") as file:
+            file.write(f"Topic: {msg.topic}\n")
+            file.write(f"Message: {msg.payload.decode()}\n")
+            file.write(f"Current date time: {ct}\n")
+            file.write(f"Current Battery percentage: {battery_values}\n")
+            file.write(f"No of Time Update: {noOfTimeUpdate}\n")
+            file.write(f"No of Time Running: {noOfTimeRunning}\n")
+            file.write("-" * 50 + "\n")
+
+# Create an MQTT client instance
+client = mqtt.Client()
+
+# Assign event callbacks
+client.on_connect = on_connect
+client.on_message = on_message
+
+# Connect to the broker
+client.connect(broker, port, 60)
+
+while 1:
+    # Blocking call that processes network traffic, dispatches callbacks, and handles reconnecting.
+    client.loop_forever()
