@@ -1,0 +1,138 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[ ]:
+
+
+pip install matplotlib
+
+
+# In[1]:
+
+
+import matplotlib.pyplot as plt
+from datetime import datetime
+import random
+
+
+# In[2]:
+
+
+file_path = r'E:\karthickraja\Embedded\Karthick\Python\E-PaperDisplay\received_05-10-30mins.txt'
+
+
+# In[3]:
+
+
+output_file = "E:\karthickraja\Embedded\Karthick\Python\E-PaperDisplay\output_Barchart.pdf"  # Specify your output file path
+
+
+# In[4]:
+
+
+output_files = "E:\karthickraja\Embedded\Karthick\Python\E-PaperDisplay\output_line_chart.pdf"  # Specify your output file path
+
+
+# In[5]:
+
+
+with open(file_path, 'r') as file:
+    data = file.read()
+
+
+# In[6]:
+
+
+# Parsing the text file to extract relevant information
+lines = data.splitlines()
+times = []
+bvolts = []
+
+
+# In[7]:
+
+
+def addlabels(x,y):
+    for i in range(len(x)):
+        plt.text(i,y[i]//2,y[i],ha = 'center',rotation=45)
+
+
+# In[8]:
+
+
+for line in lines:
+    if "Current Date and Time:" in line:
+        time_str = line.split("Current Date and Time: ")[1]
+        time_obj = datetime.strptime(time_str, "%I:%M:%p %d %b %Y")
+        times.append(time_obj.strftime("%H:%M"))  # Extract only the time in HH:MM format
+    if "bvolt" in line:
+        bvolt = float(line.split('"bvolt":')[1].split(',')[0])
+        bvolts.append(bvolt)
+
+
+# In[9]:
+
+
+colors = [(random.random(), random.random(), random.random()) for _ in bvolts]
+
+
+# In[10]:
+
+
+n_data_points = len(times)
+fig_width = max(10, n_data_points * 0.75)  # Width grows with more data points
+fig_height = 6  # Fixed height
+
+
+# In[13]:
+
+
+# Creating a bar chart
+plt.figure(figsize=(fig_width, fig_height))
+plt.bar(times, bvolts, color=colors)
+addlabels(times,bvolts)
+plt.xlabel('Time')
+plt.ylabel('Battery Voltage (bvolt)')
+plt.title('Battery Voltage Over Time')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig(output_file)
+plt.show()
+
+
+# In[17]:
+
+
+# Function to add labels near each marker
+def addlabel(times, bvolts):
+    for i in range(len(times)):
+        plt.text(times[i], bvolts[i] + 0.01,  # Slightly above the marker for clarity
+                 f'{bvolts[i]:.5f}', ha='center', fontsize=9, color='black')
+
+
+# In[18]:
+
+
+
+plt.title("Battery Monitor")
+plt.xlabel('Time')
+plt.ylabel('Battery Voltage (bvolt)')
+plt.yticks(bvolts)
+plt.plot(times, bvolts, marker = 'o', c = 'g') 
+addlabel(times,bvolts)
+plt.savefig(output_files)
+plt.show()
+
+
+# In[ ]:
+
+
+import os
+print(os.getcwd())
+
+
+# In[ ]:
+
+
+
+
