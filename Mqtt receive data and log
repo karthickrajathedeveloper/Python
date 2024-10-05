@@ -1,0 +1,79 @@
+import paho.mqtt.client as mqtt
+import json
+import datetime
+
+broker = '#ip'
+port = 1883
+subscribe_topic = 'topic'
+
+no_of_time_update = 0
+no_of_time_running = 0
+startTime = None  # Declare startTime globally as a datetime object
+
+
+def get_current_datetime():
+    """Return the current datetime object."""
+    now = datetime.datetime.now()
+    return now
+
+
+def on_connect(client, userdata, flags, rc):
+    print(f"Connected with result code {rc}")
+    client.subscribe(subscribe_topic)
+
+
+def on_message(client, userdata, msg):
+    global no_of_time_update
+    global no_of_time_running
+    global startTime
+
+    print(f"Message received on Topic {msg.topic}: {msg.payload.decode()}")
+    a = json.loads(msg.payload.decode())
+
+    if a.get("key") == "data":
+        battery_values = a.get("key")
+
+        if a.get("key") == "key":
+            # Set startTime as the current datetime object
+            startTime = get_current_datetime()
+            with open("received_05-10-30mins.txt", "a") as file:
+                file.write(f"Topic: {msg.topic}\n")
+                file.write(f"Start Time: {startTime.strftime('%I:%M:%p %d %b %Y')}\n")  # Formatting for file
+                file.write("-*" * 50 + "\n")
+
+        no_of_time_update += 1
+
+        # Get current time as a datetime object
+        ct = get_current_datetime()
+
+        if startTime:  # Check if startTime has been set
+            # Calculate time difference as timedelta object
+            time_diff = ct - startTime
+            # Convert time difference to minutes
+            no_of_time_running = time_diff.total_seconds() / 60
+
+        # Write the current information to the file
+        with open("received_05-10-30mins.txt", "a") as file:
+            file.write(f"Topic: {msg.topic}\n")
+            file.write(f"Message: {msg.payload.decode()}\n")
+            file.write(f"Current Date and Time: {ct.strftime('%I:%M:%p %d %b %Y')}\n")  # Formatting for file
+            file.write(f"Current Battery Percentage: {battery_values}\n")
+            file.write(f"No of Time Updates: {no_of_time_update}\n")
+            file.write(f"No of Time Running (minutes): {no_of_time_running}\n")
+            file.write("-" * 50 + "\n")
+
+
+# Create an MQTT client instance
+client = mqtt.Client("Pycharm")
+client.username_pw_set("username", "password")
+
+# Assign event callbacks
+client.on_connect = on_connect
+client.on_message = on_message
+
+# Connect to the broker
+client.connect(broker, port, 60)
+
+# Start the loop to process network traffic and dispatch callbacks
+client.loop_forever()
+
